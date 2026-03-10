@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+  :root { --bg:#0a0a0f; --surface:#111118; --border:#1e1e2e; --accent:#7c3aed; --accent2:#06b6d4; --text:#e2e8f0; --muted:#64748b; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Syne',sans-serif; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+  .bar { height:52px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:0.75rem; padding:0 1rem; flex-shrink:0; }
+  .logo { font-weight:800; font-size:1.1rem; background:linear-gradient(135deg,#fff,var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; user-select:none; }
+  .nav-btn { background:var(--bg); border:1px solid var(--border); color:var(--muted); width:32px; height:32px; border-radius:7px; cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center; transition:all 0.15s; flex-shrink:0; }
+  .nav-btn:hover { border-color:var(--accent); color:var(--text); }
+  .url-wrap { flex:1; display:flex; background:var(--bg); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .url-wrap:focus-within { border-color:var(--accent); }
+  #urlBar { flex:1; background:transparent; border:none; outline:none; padding:0 0.85rem; color:var(--text); font-family:'Space Mono',monospace; font-size:0.78rem; height:34px; }
+  #urlBar::placeholder { color:var(--muted); }
+  .go { background:var(--accent); border:none; color:white; padding:0 1rem; font-family:'Syne',sans-serif; font-weight:700; font-size:0.8rem; cursor:pointer; }
+  .go:hover { background:#6d28d9; }
+  .bookmarks { height:36px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:0.25rem; padding:0 1rem; overflow-x:auto; flex-shrink:0; }
+  .bookmarks::-webkit-scrollbar { display:none; }
+  .bm { background:transparent; border:1px solid transparent; color:var(--muted); padding:0.2rem 0.65rem; border-radius:5px; cursor:pointer; font-family:'Syne',sans-serif; font-size:0.72rem; font-weight:700; white-space:nowrap; transition:all 0.15s; }
+  .bm:hover { border-color:var(--border); color:var(--text); background:var(--bg); }
+  .frame-wrap { flex:1; position:relative; overflow:hidden; }
+  #frame { width:100%; height:100%; border:none; background:#fff; display:none; }
+  #home { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2rem; padding:2rem; background:var(--bg); }
+  #home::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse at 30% 30%,rgba(124,58,237,0.07) 0%,transparent 60%),radial-gradient(ellipse at 70% 70%,rgba(6,182,212,0.05) 0%,transparent 60%); pointer-events:none; }
+  .home-title { text-align:center; z-index:1; }
+  .home-title h1 { font-size:clamp(2rem,6vw,3.5rem); font-weight:800; background:linear-gradient(135deg,#fff,var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .home-title p { color:var(--muted); font-family:'Space Mono',monospace; font-size:0.75rem; margin-top:0.5rem; }
+  .quick-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:0.6rem; width:100%; max-width:600px; z-index:1; }
+  .quick-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:0.85rem 1rem; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:0.6rem; }
+  .quick-card:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:0 6px 20px rgba(124,58,237,0.15); }
+  .quick-card .icon { font-size:1.2rem; flex-shrink:0; }
+  .quick-card .name { font-size:0.82rem; font-weight:700; }
+  .status { width:8px; height:8px; border-radius:50%; background:var(--muted); flex-shrink:0; transition:background 0.3s; }
+  .status.loading { background:#f59e0b; animation:pulse 0.8s infinite; }
+  .status.ok { background:#22c55e; }
+  .status.err { background:#ef4444; }
+  #loadingOverlay { display:none; position:absolute; inset:0; background:rgba(10,10,15,0.85); align-items:center; justify-content:center; flex-direction:column; gap:1rem; z-index:10; }
+  #loadingOverlay.show { display:flex; }
+  .spinner { width:40px; height:40px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+  .loading-text { font-family:'Space Mono',monospace; font-size:0.8rem; color:var(--muted); }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+</style>
+</head>
+<body>
+<div class="bar">
+  <span class="logo">PORTAL</span>
+  <button class="nav-btn" onclick="goBack()">←</button>
+  <button class="nav-btn" onclick="goForward()">→</button>
+  <button class="nav-btn" onclick="reloadFrame()">↻</button>
+  <button class="nav-btn" onclick="goHome()">⌂</button>
+  <div class="url-wrap">
+    <input id="urlBar" type="text" placeholder="enter url or search..." autocomplete="off"/>
+    <button class="go" onclick="navigate()">GO</button>
+  </div>
+  <div class="status" id="status"></div>
+</div>
+<div class="bookmarks">
+  <button class="bm" onclick="load('https://www.google.com')">🔍 Google</button>
+  <button class="bm" onclick="load('https://www.youtube.com')">▶ YouTube</button>
+  <button class="bm" onclick="load('https://www.wikipedia.org')">📖 Wikipedia</button>
+  <button class="bm" onclick="load('https://www.khanacademy.org')">🎓 Khan Academy</button>
+  <button class="bm" onclick="load('https://www.desmos.com/calculator')">📈 Desmos</button>
+  <button class="bm" onclick="load('https://scratch.mit.edu')">🐱 Scratch</button>
+  <button class="bm" onclick="load('https://www.coolmathgames.com')">🎮 Coolmath</button>
+  <button class="bm" onclick="load('https://github.com')">💻 GitHub</button>
+</div>
+<div class="frame-wrap">
+  <div id="home">
+    <div class="home-title"><h1>PORTAL</h1><p>// type a url above or pick a site below</p></div>
+    <div class="quick-grid" id="quickGrid"></div>
+  </div>
+  <div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text">loading page...</div>
+  </div>
+  <iframe id="frame" src="about:blank" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-top-navigation-by-user-activation"></iframe>
+</div>
+<script>
+const quickSites = [
+  {name:"Google",icon:"🔍",url:"https://www.google.com"},
+  {name:"YouTube",icon:"▶️",url:"https://www.youtube.com"},
+  {name:"Wikipedia",icon:"📖",url:"https://www.wikipedia.org"},
+  {name:"Khan Acad",icon:"🎓",url:"https://www.khanacademy.org"},
+  {name:"Desmos",icon:"📈",url:"https://www.desmos.com/calculator"},
+  {name:"Scratch",icon:"🐱",url:"https://scratch.mit.edu"},
+  {name:"Coolmath",icon:"🎮",url:"https://www.coolmathgames.com"},
+  {name:"DuckDuckGo",icon:"🦆",url:"https://duckduckgo.com"},
+];
+const grid = document.getElementById('quickGrid');
+quickSites.forEach(s => {
+  const d = document.createElement('div');
+  d.className = 'quick-card';
+  d.innerHTML = `<span class="icon">${s.icon}</span><span class="name">${s.name}</span>`;
+  d.onclick = () => load(s.url);
+  grid.appendChild(d);
+});
+const frame = document.getElementById('frame');
+const urlBar = document.getElementById('urlBar');
+const statusDot = document.getElementById('status');
+const homeEl = document.getElementById('home');
+const overlay = document.getElementById('loadingOverlay');
+let navHistory = [];
+let histIdx = -1;
+let currentUrl = '';
+function setStatus(s) { statusDot.className = 'status ' + s; }
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'nav' && e.data.url) loadWithHistory(e.data.url);
+});
+frame.addEventListener('load', () => {
+  setStatus('ok');
+  overlay.classList.remove('show');
+});
+function loadWithHistory(url) {
+  navHistory = navHistory.slice(0, histIdx + 1);
+  navHistory.push(url);
+  histIdx = navHistory.length - 1;
+  loadRaw(url);
+}
+function loadRaw(url) {
+  currentUrl = url;
+  urlBar.value = url;
+  homeEl.style.display = 'none';
+  frame.style.display = 'block';
+  overlay.classList.add('show');
+  setStatus('loading');
+  frame.src = '/proxy?url=' + encodeURIComponent(url);
+}
+function load(url) { loadWithHistory(url); }
+function navigate() {
+  let val = urlBar.value.trim();
+  if (!val) return;
+  let url;
+  if (/^https?:\/\//i.test(val)) url = val;
+  else if (/\.\w{2,}/.test(val) && !val.includes(' ')) url = 'https://' + val;
+  else url = 'https://www.google.com/search?q=' + encodeURIComponent(val);
+  load(url);
+}
+function goHome() {
+  frame.style.display = 'none';
+  frame.src = 'about:blank';
+  homeEl.style.display = 'flex';
+  overlay.classList.remove('show');
+  urlBar.value = '';
+  setStatus('');
+}
+function goBack() {
+  if (histIdx > 0) { histIdx--; loadRaw(navHistory[histIdx]); }
+}
+function goForward() {
+  if (histIdx < navHistory.length - 1) { histIdx++; loadRaw(navHistory[histIdx]); }
+}
+function reloadFrame() { if (currentUrl) loadRaw(currentUrl); }
+urlBar.addEventListener('keydown', e => { if(e.key==='Enter') navigate(); });
+urlBar.addEventListener('focus', () => urlBar.select());
+</script>
+</body>
+</html>
