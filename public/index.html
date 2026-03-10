@@ -61,13 +61,13 @@
   <div class="status" id="status"></div>
 </div>
 <div class="bookmarks">
-  <button class="bm" onclick="load('https://www.google.com')">🔍 Google</button>
-  <button class="bm" onclick="load('https://www.youtube.com')">▶ YouTube</button>
-  <button class="bm" onclick="load('https://www.wikipedia.org')">📖 Wikipedia</button>
-  <button class="bm" onclick="load('https://www.khanacademy.org')">🎓 Khan Academy</button>
-  <button class="bm" onclick="load('https://www.desmos.com/calculator')">📈 Desmos</button>
+  <button class="bm" onclick="load('https://poki.com')">🎮 Poki</button>
+  <button class="bm" onclick="load('https://www.coolmathgames.com')">🧮 Coolmath</button>
   <button class="bm" onclick="load('https://scratch.mit.edu')">🐱 Scratch</button>
-  <button class="bm" onclick="load('https://www.coolmathgames.com')">🎮 Coolmath</button>
+  <button class="bm" onclick="load('https://www.wikipedia.org')">📖 Wikipedia</button>
+  <button class="bm" onclick="load('https://www.desmos.com/calculator')">📈 Desmos</button>
+  <button class="bm" onclick="load('https://www.khanacademy.org')">🎓 Khan Academy</button>
+  <button class="bm" onclick="load('https://www.silvergames.com')">🕹 Silver Games</button>
   <button class="bm" onclick="load('https://github.com')">💻 GitHub</button>
 </div>
 <div class="frame-wrap">
@@ -83,14 +83,14 @@
 </div>
 <script>
 const quickSites = [
-  {name:"Google",icon:"🔍",url:"https://www.google.com"},
-  {name:"YouTube",icon:"▶️",url:"https://www.youtube.com"},
-  {name:"Wikipedia",icon:"📖",url:"https://www.wikipedia.org"},
-  {name:"Khan Acad",icon:"🎓",url:"https://www.khanacademy.org"},
-  {name:"Desmos",icon:"📈",url:"https://www.desmos.com/calculator"},
-  {name:"Scratch",icon:"🐱",url:"https://scratch.mit.edu"},
-  {name:"Coolmath",icon:"🎮",url:"https://www.coolmathgames.com"},
-  {name:"DuckDuckGo",icon:"🦆",url:"https://duckduckgo.com"},
+  {name:"Poki",        icon:"🎮", url:"https://poki.com"},
+  {name:"Coolmath",    icon:"🧮", url:"https://www.coolmathgames.com"},
+  {name:"Scratch",     icon:"🐱", url:"https://scratch.mit.edu"},
+  {name:"Silver Games",icon:"🕹", url:"https://www.silvergames.com"},
+  {name:"Wikipedia",   icon:"📖", url:"https://www.wikipedia.org"},
+  {name:"Desmos",      icon:"📈", url:"https://www.desmos.com/calculator"},
+  {name:"Khan Acad",   icon:"🎓", url:"https://www.khanacademy.org"},
+  {name:"DuckDuckGo",  icon:"🦆", url:"https://duckduckgo.com"},
 ];
 const grid = document.getElementById('quickGrid');
 quickSites.forEach(s => {
@@ -110,7 +110,12 @@ let histIdx = -1;
 let currentUrl = '';
 function setStatus(s) { statusDot.className = 'status ' + s; }
 window.addEventListener('message', (e) => {
-  if (e.data && e.data.type === 'nav' && e.data.url) loadWithHistory(e.data.url);
+  if (e.data && e.data.type === 'nav' && e.data.url) {
+    let url = e.data.url;
+    const pp = window.location.origin + '/proxy?url=';
+    while (url.startsWith(pp)) url = decodeURIComponent(url.slice(pp.length));
+    loadWithHistory(url);
+  }
 });
 frame.addEventListener('load', () => {
   setStatus('ok');
@@ -123,6 +128,8 @@ function loadWithHistory(url) {
   loadRaw(url);
 }
 function loadRaw(url) {
+  const pp = window.location.origin + '/proxy?url=';
+  while (url.startsWith(pp)) url = decodeURIComponent(url.slice(pp.length));
   currentUrl = url;
   urlBar.value = url;
   homeEl.style.display = 'none';
